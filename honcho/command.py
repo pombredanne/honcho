@@ -4,10 +4,15 @@ import os
 import re
 import sys
 from collections import defaultdict
+try:
+    from shlex import quote as shellquote # Python 3
+except ImportError:
+    from pipes import quote as shellquote
 
 from honcho import __version__
 from honcho.procfile import Procfile
 from honcho.process import Process, ProcessManager
+from honcho import compat
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -147,7 +152,13 @@ class Honcho(object):
         "Run a command using your application's environment"
         self.set_env(self.read_env(options))
 
-        cmd = ' '.join(options.command)
+        if compat.ON_WINDOWS:
+            # do not quote on Windows, subprocess will handle it for us
+            # using the MSFT quoting rules
+            cmd = options.command
+        else:
+            cmd = ' '.join(shellquote(arg) for arg in options.command)
+
         p = Process(cmd, stdout=sys.stdout, stderr=sys.stderr)
         p.wait()
 
@@ -190,7 +201,9 @@ class Honcho(object):
             type=str, metavar='process=num,process=num')
     @option('-u', '--user',
             help="Specify the user the application should run as",
-            default=os.environ['USER'], type=str)
+            # USER is not defined on Windows
+            default=os.environ['USERNAME' if compat.ON_WINDOWS else 'USER'],
+            type=str)
     @option('-s', '--shell',
             help="Specify the shell that should run the application",
             default='/bin/sh', type=str)
