@@ -1,6 +1,8 @@
 from datetime import datetime
 import sys
 
+from .compat import ON_WINDOWS
+
 
 class Printer(object):
     def __init__(self, output=sys.stdout, name='unknown', colour=None, width=0):
@@ -25,7 +27,7 @@ class Printer(object):
         time = datetime.now().strftime('%H:%M:%S')
         name = self.name.ljust(self.width)
         prefix = '{time} {name} | '.format(time=time, name=name)
-        if self.colour:
+        if self.colour and not ON_WINDOWS:
             return _colour_string(self.colour, prefix)
         else:
             return prefix
