@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 PATH = os.path.dirname(__file__)
 BASENAME = os.path.basename(os.getcwd())
 
-EXPORT_CHOICES = ['upstart']
+EXPORT_CHOICES = ['supervisord', 'upstart']
 
 process_manager = ProcessManager()
 
@@ -63,9 +63,8 @@ class CommandError(Exception):
     pass
 
 
-class Honcho(object):
+class Honcho(compat.with_metaclass(Commander, object)):
     "Manage Procfile-based applications"
-    __metaclass__ = Commander
 
     name = 'honcho'
     version = __version__
@@ -129,8 +128,7 @@ class Honcho(object):
         try:
             options.func(self, options)
         except CommandError as e:
-            if e.message:
-                log.error(e.message)
+            log.error(str(e))
             sys.exit(1)
 
     @arg('task', help='Task to show help for', nargs='?')
@@ -161,9 +159,11 @@ class Honcho(object):
 
         p = Process(cmd, stdout=sys.stdout, stderr=sys.stderr)
         p.wait()
+        sys.exit(p.returncode)
 
     @option('-p', '--port', type=int, default=5000, metavar='N')
     @option('-c', '--concurrency', help='The number of each process type to run.', type=str, metavar='process=num,process=num')
+    @option('-q', '--quiet', help='Any processes that you want to quiet ouput of.', type=str, metavar='process1,process2,process3')
     @arg('process', nargs='?', help='Name of process to start. All processes will be run if omitted.')
     def start(self, options):
         "Start the application (or a specific PROCESS)"
@@ -172,6 +172,8 @@ class Honcho(object):
 
         port = int(os.environ.get('PORT', options.port))
         concurrency = self.parse_concurrency(options.concurrency)
+        quiet = self.parse_quiet(options.quiet)
+
 
         if options.process is not None:
             try:
@@ -181,11 +183,11 @@ class Honcho(object):
         else:
             commands = procfile.commands
 
-        for name, cmd in commands.iteritems():
-            for i in xrange(concurrency[name]):
+        for name, cmd in compat.iteritems(commands):
+            for i in compat.xrange(concurrency[name]):
                 n = '{name}.{num}'.format(name=name, num=i + 1)
                 os.environ['PORT'] = str(port + i)
-                process_manager.add_process(n, cmd)
+                process_manager.add_process(n, cmd, quiet=(name in quiet))
             port += 100
 
         sys.exit(process_manager.loop())
@@ -286,6 +288,14 @@ class Honcho(object):
             key, concurrency = item.split('=', 1)
             result[key] = int(concurrency)
         return result
+
+    def parse_quiet(self, desc):
+        result = []
+        if desc is None:
+            return result
+        result = desc.split(',')
+        return result
+
 
 
 def main():

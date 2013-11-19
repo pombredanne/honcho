@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import pwd
 from honcho.command import CommandError, PATH
@@ -14,7 +15,7 @@ class BaseExport(object):
         try:
             user_entry = pwd.getpwnam(options.user)
         except KeyError:
-            raise CommandError("No such user available: {}"
+            raise CommandError("No such user available: {0}"
                                .format(options.user))
 
         self.uid = user_entry.pw_uid
@@ -25,16 +26,16 @@ class BaseExport(object):
             return
         try:
             os.makedirs(directory)
-        except OSError, e:
-            print e
-            raise CommandError("Can not create {}"
+        except OSError as e:
+            print(e)
+            raise CommandError("Can not create {0}"
                                .format(directory))
 
     def _chown(self, filename):
         try:
             os.chown(filename, self.uid, self.gid)
         except OSError:
-            raise CommandError("Can not chown {} to {}"
+            raise CommandError("Can not chown {0} to {1}"
                                .format(self.options.log,
                                        self.options.user))
 
@@ -44,7 +45,7 @@ class BaseExport(object):
         try:
             open(path, 'w').write(content)
         except IOError:
-            raise CommandError("Can not write to file {}"
+            raise CommandError("Can not write to file {0}"
                                .format(path))
 
     def get_template(self, name):
@@ -53,7 +54,7 @@ class BaseExport(object):
         try:
             return Template(open(path).read())
         except IOError:
-            raise CommandError("Can not find template with name {}"
+            raise CommandError("Can not find template with name {0}"
                                .format(name))
 
     def export(self):
