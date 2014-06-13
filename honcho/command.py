@@ -5,7 +5,7 @@ import re
 import sys
 from collections import defaultdict
 try:
-    from shlex import quote as shellquote # Python 3
+    from shlex import quote as shellquote  # Python 3
 except ImportError:
     from pipes import quote as shellquote
 
@@ -41,7 +41,7 @@ arg = option
 
 
 class Commander(type):
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):  # noqa
         subcommands = {}
         commands = attrs.get('commands', [])
         for command in commands:
@@ -162,9 +162,11 @@ class Honcho(compat.with_metaclass(Commander, object)):
         sys.exit(p.returncode)
 
     @option('-p', '--port', type=int, default=5000, metavar='N')
-    @option('-c', '--concurrency', help='The number of each process type to run.', type=str, metavar='process=num,process=num')
-    @option('-q', '--quiet', help='Any processes that you want to quiet ouput of.', type=str, metavar='process1,process2,process3')
-    @arg('process', nargs='?', help='Name of process to start. All processes will be run if omitted.')
+    @option('-c', '--concurrency', help='The number of each process type to run.',
+            type=str, metavar='process=num,process=num')
+    @option('-q', '--quiet', help='Any processes that you want to quiet ouput of.',
+            type=str, metavar='process1,process2,process3')
+    @arg('processes', nargs='*', help='Process(es) to start. All processes will be run if omitted.')
     def start(self, options):
         "Start the application (or a specific PROCESS)"
         self.set_env(self.read_env(options))
@@ -174,12 +176,15 @@ class Honcho(compat.with_metaclass(Commander, object)):
         concurrency = self.parse_concurrency(options.concurrency)
         quiet = self.parse_quiet(options.quiet)
 
+        processes = options.processes
 
-        if options.process is not None:
-            try:
-                commands = {options.process: procfile.commands[options.process]}
-            except KeyError:
-                raise CommandError("Process type '{0}' does not exist in Procfile".format(options.process))
+        if len(processes) > 0:
+            commands = {}
+            for process in processes:
+                try:
+                    commands[process] = procfile.commands[process]
+                except KeyError:
+                    raise CommandError("Process type '{0}' does not exist in Procfile".format(process))
         else:
             commands = procfile.commands
 
@@ -203,8 +208,6 @@ class Honcho(compat.with_metaclass(Commander, object)):
             type=str, metavar='process=num,process=num')
     @option('-u', '--user',
             help="Specify the user the application should run as",
-            # USER is not defined on Windows
-            default=os.environ['USERNAME' if compat.ON_WINDOWS else 'USER'],
             type=str)
     @option('-s', '--shell',
             help="Specify the shell that should run the application",
@@ -219,6 +222,16 @@ class Honcho(compat.with_metaclass(Commander, object)):
         "Export the application to another process management format"
         if options.log == "/var/log/APP":
             options.log = options.log.replace('APP', options.app)
+
+        if options.user is None:
+            if compat.ON_WINDOWS:
+                options.user = os.environ.get('USERNAME')
+            else:
+                options.user = os.environ.get('USER')
+
+        if options.user is None:
+            raise CommandError('Could not automatically deduce user: please '
+                               'supply the -u/--user option.')
 
         options.app_root = os.path.abspath(options.app_root)
 
@@ -295,7 +308,6 @@ class Honcho(compat.with_metaclass(Commander, object)):
             return result
         result = desc.split(',')
         return result
-
 
 
 def main():

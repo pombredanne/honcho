@@ -100,3 +100,44 @@ If you supply multiple comma-separated arguments to the ``-e`` option, Honcho wi
     $ honcho -e .env.one,.env.two run sh -c 'env | grep -i animal'
     ANIMAL_1=giraffe
     ANIMAL_2=elephant
+
+Differences to Foreman
+----------------------
+
+One of the curses of maintaining a "clone" of someone else's program is that
+you are forever asked to reimplement whatever questionable features upstream has
+introduced. So, while Honcho is based heavily on the Foreman_ project, there
+are some important differences between the two tools, some of which are simply
+the result of differences between Ruby and Python, and others are matters of
+software design. The following is a non-exhaustive list of these differences:
+
+.. _Foreman: https://github.com/ddollar/foreman
+
+No `honcho run {target}`
+''''''''''''''''''''''''
+
+Foreman allows you to specify a Procfile target to both the `start` and `run`
+subcommands. To me, it seems obvious that this functionality belongs only in
+`honcho start`, a command that always reads the Procfile and has no other use
+for its ARGV, as opposed to `honcho run`, which is intended for running a
+shell command in the environment provided by Honcho and `.env` files. Because
+I don't have to guess at whether or not ARGV is a process name or a shell
+command, `honcho start` even supports multiple processes:
+`honcho start web worker`.
+
+Buffered output
+'''''''''''''''
+
+By default, Python will buffer a program's output more aggressively than Ruby
+when a process has ``STDOUT`` connected to something other than a TTY. This can
+catch people out when running Python programs through Honcho: if the program
+only generates small amounts of output, it will be buffered, unavailable to
+Honcho, and will not display.
+
+One way around this is to set the ``PYTHONUNBUFFERED`` environment variable in
+your ``Procfile`` or your ``.env`` file. Be sure you understand the performance
+implications of unbuffered I/O if you do this.
+
+For example::
+
+    myprogram: PYTHONUNBUFFERED=true python myprogram.py
