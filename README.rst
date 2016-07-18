@@ -12,16 +12,25 @@
         /:/  /       \::/  /        /:/  /       \:\__\         /:/  /       \::/  /
         \/__/         \/__/         \/__/         \/__/         \/__/         \/__/
 
-|Build Status|
+|PyPI| |Build Status| |Code Health|
 
 Honcho is a Python port of Foreman_, a tool for managing Procfile-based applications.
 
-`Why a port? <//honcho.readthedocs.org/en/latest/#why-did-you-port-foreman>`_
+`Why a port? <//honcho.readthedocs.io/en/latest/#why-did-you-port-foreman>`_
 
 .. _Foreman: http://ddollar.github.com/foreman
 
-.. |Build Status| image:: https://secure.travis-ci.org/nickstenning/honcho.png?branch=master
+.. |Build Status| image:: https://secure.travis-ci.org/nickstenning/honcho.svg?branch=master
    :target: http://travis-ci.org/nickstenning/honcho
+   :alt: Build Status
+
+.. |Code Health| image:: https://landscape.io/github/nickstenning/honcho/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/nickstenning/honcho/master
+   :alt: Code Health
+
+.. |PyPI| image:: https://pypip.in/version/honcho/badge.svg?style=flat
+   :target: https://pypi.python.org/pypi/honcho/
+   :alt: Latest Version on PyPI
 
 Installing Honcho
 -----------------
@@ -29,12 +38,6 @@ Installing Honcho
 ::
 
     pip install honcho
-
-If you're one of those sick people who's into this kind of thing, you
-can probably also ``easy_install honcho``. But please, don't: `get with
-the program`_.
-
-.. _get with the program: http://www.pip-installer.org/en/latest/index.html
 
 How to use Honcho
 -----------------
@@ -65,7 +68,7 @@ The 30-second version:
 For more detail and an explanation of the circumstances in which Honcho might
 be useful, consult the `Honcho documentation`_.
 
-.. _Honcho documentation: //honcho.readthedocs.org/
+.. _Honcho documentation: https://honcho.readthedocs.io/
 
 License
 -------

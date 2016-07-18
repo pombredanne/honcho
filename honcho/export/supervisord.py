@@ -1,40 +1,15 @@
-import pipes
-from honcho import compat
+import jinja2
+
 from honcho.export.base import BaseExport
+from honcho.export.base import File
 
 
 class Export(BaseExport):
-    def render(self, procfile, options, environment, concurrency):
-        commands = []
-        port = options.port
-        for name, cmd in procfile.commands.items():
-            for num in compat.xrange(0, concurrency[name]):
-                full_name_parts = [options.app, name]
-                env = environment.copy()
-                if concurrency[name] > 1:
-                    env['PORT'] = str(port + num)
-                    full_name_parts.append(str(num))
-                else:
-                    env['PORT'] = str(port)
-                commands.append((
-                    name,
-                    cmd,
-                    '-'.join(full_name_parts),
-                    num,
-                    [(key, '"%s"' % pipes.quote(value)) for key, value in env.items()]  # quote env values
-                ))
-            port += 100
+    def get_template_loader(self):
+        return jinja2.PackageLoader(__name__, 'templates/supervisord')
 
-        context = {
-            'app':         options.app,
-            'app_root':    options.app_root,
-            'log':         options.log,
-            'port':        options.port,
-            'user':        options.user,
-            'shell':       options.shell,
-            'commands':    commands,
-            'concurrency': concurrency
-        }
-        filename = "{0}.conf".format(options.app)
-        content = self.get_template("supervisord.conf").render(context)
-        return [(filename, content)]
+    def render(self, processes, context):
+        context['processes'] = processes
+        filename = "{0}.conf".format(context['app'])
+        template = self.get_template('supervisord.conf')
+        return [File(filename, template.render(context))]

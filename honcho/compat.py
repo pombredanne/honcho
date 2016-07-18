@@ -11,21 +11,17 @@ ON_WINDOWS = 'win32' in str(sys.platform).lower()
 try:
     {}.iteritems
 except AttributeError:
-    iteritems = lambda data: data.items()
+    def iteritems(data):
+        return data.items()
 else:
-    iteritems = lambda data: data.iteritems()
+    def iteritems(data):
+        return data.iteritems()
 
 # Python 3 hasn't xrange, we should use range instead
 try:
     xrange = xrange
 except NameError:
     xrange = range
-
-
-# Python 3 doesn't understand __metaclass__ magic
-def with_metaclass(meta, *bases):
-    """Create a base class with metaclass."""
-    return meta('NewBase', bases, {})
 
 # Python 3 does not have StringIO, we should use the io module instead
 try:
@@ -38,3 +34,21 @@ try:
     from ConfigParser import ConfigParser  # noqa
 except ImportError:
     from configparser import ConfigParser  # noqa
+
+# Python 3 exposed quote as public API in the shlex module
+try:
+    from pipes import quote as shellquote  # noqa
+except ImportError:
+    from shlex import quote as shellquote  # noqa
+
+# Python 3 renamed Queue to queue
+try:
+    from Queue import Queue, Empty  # noqa
+except ImportError:
+    from queue import Queue, Empty  # noqa
+
+# Python <2.7 doesn't have OrderedDict in the collections module
+try:
+    from collections import OrderedDict  # noqa
+except ImportError:
+    from ordereddict import OrderedDict  # noqa

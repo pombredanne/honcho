@@ -1,11 +1,12 @@
 from __future__ import print_function
-import os
-import pwd
+
+import re
 import sys
-from honcho.command import CommandError, PATH
+
+from honcho.compat import shellquote
 
 try:
-    from jinja2 import Template
+    import jinja2
 except ImportError:
     print("honcho's 'export' command requires the jinja2 package,\n"
           "which you don't appear to have installed.\n"
@@ -18,71 +19,59 @@ except ImportError:
 
 
 class BaseExport(object):
-    def __init__(self, procfile, options, environment, concurrency):
-        self.procfile = procfile
-        self.options = options
-        self.environment = environment
-        self.concurrency = concurrency
-
-        try:
-            user_entry = pwd.getpwnam(options.user)
-        except KeyError:
-            raise CommandError("No such user available: {0}"
-                               .format(options.user))
-
-        self.uid = user_entry.pw_uid
-        self.gid = user_entry.pw_gid
-
-    def _mkdir(self, directory):
-        if os.path.exists(directory):
+    def __init__(self, template_dir=None, template_env=None):
+        if template_env is not None:
+            self._template_env = template_env
             return
-        try:
-            os.makedirs(directory)
-        except OSError as e:
-            print(e)
-            raise CommandError("Can not create {0}"
-                               .format(directory))
 
-    def _chown(self, filename):
-        try:
-            os.chown(filename, self.uid, self.gid)
-        except OSError:
-            raise CommandError("Can not chown {0} to {1}"
-                               .format(self.options.log,
-                                       self.options.user))
+        if template_dir is not None:
+            loader = jinja2.FileSystemLoader([template_dir])
+        else:
+            loader = self.get_template_loader()
 
-    def _write(self, filename, content):
-        path = os.path.join(self.options.location, filename)
+        self._template_env = _default_template_env(loader)
 
-        try:
-            open(path, 'w').write(content)
-        except IOError:
-            raise CommandError("Can not write to file {0}"
-                               .format(path))
+    def get_template(self, path):
+        """
+        Retrieve the template at the specified path. Returns an instance of
+        :py:class:`Jinja2.Template` by default, but may be overridden by
+        subclasses.
+        """
+        return self._template_env.get_template(path)
 
-    def get_template(self, name):
-        path = os.path.join(PATH, 'data/export/', self.options.format, name)
+    def get_template_loader(self):
+        raise NotImplementedError("You must implement a get_template_loader "
+                                  "method.")
 
-        try:
-            return Template(open(path).read())
-        except IOError:
-            raise CommandError("Can not find template with name {0}"
-                               .format(name))
+    def render(self, processes, context):
+        raise NotImplementedError("You must implement a render method.")
 
-    def export(self):
-        self._mkdir(self.options.location)
-        self._mkdir(self.options.log)
-        self._chown(self.options.log)
 
-        files = self.render(self.procfile,
-                            self.options,
-                            self.environment,
-                            self.concurrency)
+class File(object):
+    def __init__(self, name, content, executable=False):
+        self.name = name
+        self.content = content
+        self.executable = executable
 
-        for name, content in files:
-            self._write(name, content)
 
-        return files
+def dashrepl(value):
+    """
+    Replace any non-word characters with a dash.
+    """
+    patt = re.compile(r'\W', re.UNICODE)
+    return re.sub(patt, '-', value)
 
-    def render(self, procfile, options, environment, concurrency):
-        raise NotImplementedError("You must write a render method.")
+
+def percentescape(value):
+    """
+    Double any % signs.
+    """
+    return value.replace('%', '%%')
+
+
+def _default_template_env(loader):
+    env = jinja2.Environment(loader=loader)
+    env.filters['shellquote'] = shellquote
+    env.filters['dashrepl'] = dashrepl
+    env.filters['percentescape'] = percentescape
+    return env
